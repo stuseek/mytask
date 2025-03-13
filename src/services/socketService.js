@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 let io;
 
 /**
- * Initialize WebSocket server
+ * Initialize WebSocket server with optimizations for concurrent users
  * @param {Object} server - HTTP server instance
  */
 exports.initialize = (server) => {
@@ -14,8 +14,27 @@ exports.initialize = (server) => {
             origin: process.env.CLIENT_URL || '*',
             methods: ['GET', 'POST'],
             credentials: true
-        }
+        },
+        // Socket.IO optimizations for higher concurrency
+        pingInterval: 25000, // Check connection every 25 seconds
+        pingTimeout: 60000, // Wait 60 seconds before considering connection as closed
+        maxHttpBufferSize: 1e6, // 1MB - prevent large payload attacks
+        transports: ['websocket', 'polling'], // Prefer WebSocket over polling
+        // Performance/security settings
+        connectTimeout: 45000, // Longer timeout for slower connections
+        path: '/socket.io', // Explicit path to avoid conflicts
     });
+    
+    // Socket connection limit monitoring
+    setInterval(() => {
+        const connectedSockets = io.engine.clientsCount;
+        console.log(`Current connected sockets: ${connectedSockets}`);
+        
+        // Alert if getting close to high connection counts
+        if (connectedSockets > 200) {
+            console.warn(`High socket connection count: ${connectedSockets}`);
+        }
+    }, 60000); // Check every minute
     
     // Socket authentication middleware
     io.use((socket, next) => {
@@ -41,6 +60,9 @@ exports.initialize = (server) => {
         
         // Join user to their personal room
         socket.join(`user:${socket.userId}`);
+        
+        // Track socket connections per user to prevent socket accumulation
+        incrementUserSocketCount(socket.userId);
         
         // Join project rooms (called when user loads a project)
         socket.on('joinProject', (projectId) => {
@@ -69,11 +91,40 @@ exports.initialize = (server) => {
         // Disconnect event
         socket.on('disconnect', () => {
             console.log(`User disconnected: ${socket.userId}`);
+            decrementUserSocketCount(socket.userId);
         });
+        
+        // Error handling
+        socket.on('error', (error) => {
+            console.error(`Socket error for user ${socket.userId}:`, error);
+        });
+    });
+    
+    // Add error handling to the IO instance
+    io.engine.on('connection_error', (err) => {
+        console.error('Connection error:', err);
     });
     
     return io;
 };
+
+// User socket connection tracking to prevent leaks
+const userSocketCounts = {};
+
+function incrementUserSocketCount(userId) {
+    userSocketCounts[userId] = (userSocketCounts[userId] || 0) + 1;
+    
+    // Log when a user has many open connections
+    if (userSocketCounts[userId] > 5) {
+        console.warn(`User ${userId} has ${userSocketCounts[userId]} open socket connections`);
+    }
+}
+
+function decrementUserSocketCount(userId) {
+    if (userSocketCounts[userId]) {
+        userSocketCounts[userId]--;
+    }
+}
 
 /**
  * Emit an event to a specific user

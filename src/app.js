@@ -6,14 +6,14 @@ const morgan = require('morgan');
 const compression = require('compression');
 const { standardLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
-const http = require('http');
-const socketService = require('./services/socketService');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const sprintRoutes = require('./routes/sprintRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const summaryRoutes = require('./routes/summaryRoutes');
 
 // Create Express app
 const app = express();
@@ -45,6 +45,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/sprints', sprintRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/summaries', summaryRoutes);
 
 // API documentation route
 app.use('/api-docs', express.static('src/swagger/docs'));
@@ -65,10 +67,5 @@ app.use('*', (req, res, next) => {
 // Global error handler
 app.use(errorHandler);
 
-// Create HTTP server
-const server = http.createServer(app);
-
-// Initialize Socket.io
-socketService.initialize(server);
-
-module.exports = server;
+// Export the Express app
+module.exports = app;

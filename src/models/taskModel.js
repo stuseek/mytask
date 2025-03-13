@@ -6,8 +6,8 @@ const taskSchema = new Schema({
   description: { type: String },
   status: {
     type: String,
-    default: 'ToDo',
-    enum: ['ToDo', 'Doing', 'Testing', 'Done']
+    default: 'ToDo'
+    // No enum constraint to allow custom statuses
   },
   priority: {
     type: String,
@@ -27,6 +27,31 @@ const taskSchema = new Schema({
   startDate: { type: Date },
   endDate: { type: Date },
   createdAt: { type: Date, default: Date.now }
+});
+
+// Middleware to validate task status against project settings
+taskSchema.pre('save', async function(next) {
+  if (this.isModified('status')) {
+    try {
+      const Project = mongoose.model('Project');
+      const project = await Project.findById(this.projectId);
+      
+      if (!project) {
+        return next(new Error('Project not found'));
+      }
+      
+      // Check if status is valid for this project
+      if (!project.settings.statuses.includes(this.status)) {
+        return next(new Error(`Invalid status '${this.status}' for this project`));
+      }
+      
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
+  }
 });
 
 module.exports = mongoose.model('Task', taskSchema);
