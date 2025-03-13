@@ -1,0 +1,232 @@
+// src/swagger/sprintRoutes.yaml
+paths:
+  /api/projects/{projectId}/sprints:
+    post:
+      summary: Create a new sprint
+      tags:
+        - Sprints
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SprintInput'
+      responses:
+        201:
+          description: Sprint created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SprintResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      summary: Get all sprints for a project
+      tags:
+        - Sprints
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of sprints retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 2
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Sprint'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    SprintInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "Sprint 1"
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          example: "First sprint for project X"
+        startDate:
+          type: string
+          format: date
+          example: "2025-03-20"
+        endDate:
+          type: string
+          format: date
+          example: "2025-04-03"
+    
+    Sprint:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d21b4667d0d8992e610c85"
+        name:
+          type: string
+          example: "Sprint 1"
+        description:
+          type: string
+          example: "First sprint for project X"
+        projectId:
+          type: string
+          example: "60d21b4667d0d8992e610c80"
+        startDate:
+          type: string
+          format: date-time
+          example: "2025-03-20T00:00:00.000Z"
+        endDate:
+          type: string
+          format: date-time
+          example: "2025-04-03T00:00:00.000Z"
+        taskIds:
+          type: array
+          items:
+            type: string
+            example: "60d21b4667d0d8992e610c90"
+        progressPercentage:
+          type: number
+          example: 45
+        status:
+          type: string
+          enum: ['Planning', 'Active', 'Completed', 'Cancelled']
+          example: "Active"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-03-13T10:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-03-14T10:00:00.000Z"
+        durationDays:
+          type: integer
+          example: 14
+        remainingDays:
+          type: integer
+          example: 7
+        tasksCount:
+          type: integer
+          example: 12
+
+    SprintResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Sprint'
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Sprint name must be between 3 and 100 characters"
+    
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Authentication required"
+    
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Not authorized to perform this action"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Sprint not found"
+    
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Failed to process request"
